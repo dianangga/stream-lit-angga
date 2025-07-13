@@ -207,7 +207,7 @@ def scrape_all_comments(driver):
     """Scrape comments from all pages"""
     all_comments = []
     page_number = 1
-    max_pages = 20  # Safety limit
+    max_pages = 1  # Safety limit
     
     # Scroll to reviews section
     scroll_to_reviews(driver)
