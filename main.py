@@ -5,6 +5,7 @@ import os
 import pickle
 import re
 import time
+from urllib.parse import urlparse
 
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
@@ -174,143 +175,138 @@ with tab1:
         except Exception as e:
             st.error(f"❌ Terjadi kesalahan: {e}")
 with tab2:
-   st.title("📌 Tab 2: Proses Otomatis dari Scraping Tokopedia (Lexicon + TF-IDF + SVM)")
+    st.title("📌 Tab 2: Proses Otomatis dari Scraping Tokopedia (Lexicon + TF-IDF + SVM)")
 
-url_input = st.text_input("🔗 Masukkan URL produk Tokopedia")
+    url_input = st.text_input("🔗 Masukkan URL produk Tokopedia")
 
-if url_input:
-    scrape_button = st.button("🚀 Mulai Scraping & Analisis")
+    kernel_option = st.selectbox(
+        "🔧 Pilih Kernel SVM",
+        options=["linear", "poly", "rbf", "sigmoid"],
+        index=0
+    )
 
-    if scrape_button:
-        try:
-            st.info("📡 Membuka halaman Tokopedia...")
-            driver = tp.get_driver()
+    if url_input:
+        scrape_button = st.button("🚀 Mulai Scraping & Analisis")
 
-            if tp.open_url(driver, url_input):
-                st.info("📥 Scraping komentar produk...")
+        if scrape_button:
+            try:
+                parsed_url = urlparse(url_input)
 
-                # Load cookies jika ada
+                if  parsed_url.hostname != "www.tokopedia.com":
+                    raise Exception("URL bukan dari Tokopedia")
+
+                st.info("📡 Membuka halaman Tokopedia...")
+                driver = tp.get_driver()
+
+                if tp.open_url(driver, url_input):
+                    st.info("📥 Scraping komentar produk...")
+
+                    comments = tp.scrape_tokopedia_reviews(driver)
+                    driver.quit()
+
+                    st.subheader("💬 Komentar yang berhasil di-scrape")
+                    st.write(f"Total komentar ditemukan: {len(comments)}")
+                    st.dataframe(pd.DataFrame(comments, columns=["Komentar"]))
+
+                    # === Preprocessing
+                    new_texts = comments
+                    tokenized_texts = [tokenize(preprocess(text)) for text in new_texts]
+                    cleaned_texts = [' '.join(tokens) for tokens in tokenized_texts]
+
+                    # === Load model SVM sesuai kernel
+                    try:
+                        with open(f'model/svm_model_{kernel_option}.pkl', 'rb') as f:
+                            model = pickle.load(f)
+                        with open('model/tfidf_vectorizer.pkl', 'rb') as f:
+                            vectorizer = pickle.load(f)
+                        with open('model/label_encoder.pkl', 'rb') as f:
+                            encoder = pickle.load(f)
+                    except FileNotFoundError:
+                        st.error(f"❌ Model untuk kernel '{kernel_option}' belum dilatih. Silakan latih terlebih dahulu di Tab 3 atau pastikan file 'svm_model_{kernel_option}.pkl' ada.")
+                        st.stop()
+
+                    # === Load Lexicon (senang, marah, sedih saja)
+                    nrc_df = pd.read_csv("lexicon/Indonesian-NRC-EmoLex.csv", sep=";", encoding="utf-8")
+                    senang_words = set(nrc_df[nrc_df['joy'] == 1]['Indonesian Word'].str.lower())
+                    marah_words = set(nrc_df[nrc_df['anger'] == 1]['Indonesian Word'].str.lower())
+                    sedih_words = set(nrc_df[nrc_df['sadness'] == 1]['Indonesian Word'].str.lower())
+
+                    def label_by_lexicon(tokens):
+                        total_match = {
+                            "senang": sum(w in senang_words for w in tokens),
+                            "marah": sum(w in marah_words for w in tokens),
+                            "sedih": sum(w in sedih_words for w in tokens),
+                        }
+                        values = list(total_match.values())
+
+                        # Jika tidak ada kecocokan sama sekali
+                        if sum(values) == 0:
+                            return "netral"
+                        # Jika semua nilainya sama
+                        if values.count(values[0]) == len(values):
+                            return "netral"
+                        # Jika tidak, ambil yang jumlahnya paling besar
+                        return max(total_match, key=total_match.get)
+
+                    # === Prediksi Gabungan
+                    results = []
+                    final_predictions = []
+
+                    for i in range(len(cleaned_texts)):
+                        cleaned = cleaned_texts[i]
+                        tokens = tokenized_texts[i]
+
+                        X_new = vectorizer.transform([cleaned])
+                        svm_pred = model.predict(X_new)
+                        svm_label = encoder.inverse_transform(svm_pred)[0]
+
+                        lexicon_label = label_by_lexicon(tokens)
+
+                        final_label = lexicon_label if svm_label == 'netral' or svm_label != lexicon_label else svm_label
+
+                        final_predictions.append(svm_label)
+                        results.append({
+                            "Teks Asli": new_texts[i],
+                            "Preprocessed": cleaned,
+                            "Prediksi SVM": svm_label,
+                            "Prediksi Lexicon": lexicon_label,
+                            "Final Decision": final_label
+                        })
+
+                    st.subheader("📊 Hasil Prediksi Gabungan (SVM + Lexicon)")
+                    st.dataframe(pd.DataFrame(results))
+
+                    y_true = [label_by_lexicon(tokens) for tokens in tokenized_texts]
+                    y_pred = final_predictions
+
+                    mapped_labels = ["senang", "marah", "sedih", "netral"]
+
+                    st.subheader("📋 Classification Report")
+                    st.text(classification_report(
+                        y_true,
+                        y_pred,
+                        labels=mapped_labels,
+                        target_names=mapped_labels,
+                        digits=3
+                    ))
+
+                    st.subheader("🔍 Confusion Matrix")
+                    cm = confusion_matrix(y_true, y_pred, labels=mapped_labels)
+                    cm_df = pd.DataFrame(cm,
+                        index=[f"Actual: {label.capitalize()}" for label in mapped_labels],
+                        columns=[f"Pred: {label.capitalize()}" for label in mapped_labels])
+                    st.dataframe(cm_df)
+
+                else:
+                    st.error("❌ Gagal membuka halaman URL.")
+
+            except Exception as e:
+                st.error(f"❌ Terjadi kesalahan: {e}")
+            finally:
                 try:
-                    COOKIES_FILE = "scraping/tokopedia_cookies.json"
-                    tp.load_cookies(driver, COOKIES_FILE)
-                    driver.refresh()
-                    time.sleep(3)
+                    driver.quit()
                 except:
                     pass
-
-                # Scrape semua komentar
-                comments = tp.scrape_all_comments(driver)
-
-                # Simpan komentar
-                if comments:
-                    with open("tokopedia_comments.txt", "w", encoding="utf-8", errors="ignore") as f:
-                        for comment in comments:
-                            f.write(comment + "\n")
-                else:
-                    st.warning("⚠️ Tidak ada komentar ditemukan.")
-                    st.stop()
-
-                tp.save_cookies(driver, COOKIES_FILE)
-                driver.quit()
-
-                st.subheader("💬 Komentar yang berhasil di-scrape")
-                st.write(f"Total komentar ditemukan: {len(comments)}")
-                st.dataframe(pd.DataFrame(comments, columns=["Komentar"]))
-
-                # === Preprocessing
-                new_texts = comments
-                tokenized_texts = [tokenize(preprocess(text)) for text in new_texts]
-                cleaned_texts = [' '.join(tokens) for tokens in tokenized_texts]
-
-                # === Load model
-                with open('model/svm_model.pkl', 'rb') as f:
-                    model = pickle.load(f)
-                with open('model/tfidf_vectorizer.pkl', 'rb') as f:
-                    vectorizer = pickle.load(f)
-                with open('model/label_encoder.pkl', 'rb') as f:
-                    encoder = pickle.load(f)
-
-                # === Load Lexicon (senang, marah, sedih saja)
-                # === Load NRC Lexicon dalam Bahasa Indonesia ===
-                nrc_df = pd.read_csv("lexicon/Indonesian-NRC-EmoLex.csv", sep=";", encoding="utf-8")
-
-                # Pastikan kolom sesuai
-                # nrc_df.columns = [col.strip() for col in nrc_df.columns]  # buang spasi jika ada
-
-                # Ambil hanya kata Bahasa Indonesia dari kolom 'Indonesian Word'
-                senang_words = set(nrc_df[nrc_df['joy'] == 1]['Indonesian Word'].str.lower())
-                marah_words = set(nrc_df[nrc_df['anger'] == 1]['Indonesian Word'].str.lower())
-                sedih_words = set(nrc_df[nrc_df['sadness'] == 1]['Indonesian Word'].str.lower())
-                def label_by_lexicon(tokens):
-                    total_match = {
-                        "senang": sum(w in senang_words for w in tokens),
-                        "marah": sum(w in marah_words for w in tokens),
-                        "sedih": sum(w in sedih_words for w in tokens),
-                    }
-                    return max(total_match, key=total_match.get) if any(total_match.values()) else "netral"
-
-                # === Prediksi Gabungan
-                results = []
-                final_predictions = []
-
-                for i in range(len(cleaned_texts)):
-                    cleaned = cleaned_texts[i]
-                    tokens = tokenized_texts[i]
-
-                    # SVM
-                    X_new = vectorizer.transform([cleaned])
-                    svm_pred = model.predict(X_new)
-                    svm_label = encoder.inverse_transform(svm_pred)[0]
-
-                    # Lexicon
-                    lexicon_label = label_by_lexicon(tokens)
-
-                    # Final decision
-                    final_label = lexicon_label if svm_label == 'netral' or svm_label != lexicon_label else svm_label
-
-                    final_predictions.append(final_label)
-                    results.append({
-                        "Teks Asli": new_texts[i],
-                        "Preprocessed": cleaned,
-                        "Prediksi SVM": svm_label,
-                        "Prediksi Lexicon": lexicon_label,
-                        "Final Decision": final_label
-                    })
-
-                st.subheader("📊 Hasil Prediksi Gabungan (SVM + Lexicon)")
-                st.dataframe(pd.DataFrame(results))
-
-                y_true = [label_by_lexicon(tokens) for tokens in tokenized_texts]
-                y_pred = final_predictions
-
-                mapped_labels = ["senang", "marah", "sedih", "netral"]
-
-                st.subheader("📋 Classification Report")
-                st.text(classification_report(
-                    y_true,
-                    y_pred,
-                    labels=mapped_labels,
-                    target_names=mapped_labels,
-                    digits=3
-                ))
-
-                st.subheader("🔍 Confusion Matrix")
-                cm = confusion_matrix(y_true, y_pred, labels=mapped_labels)
-                cm_df = pd.DataFrame(cm,
-                    index=[f"Actual: {label.capitalize()}" for label in mapped_labels],
-                    columns=[f"Pred: {label.capitalize()}" for label in mapped_labels])
-                st.dataframe(cm_df)
-
-            else:
-                st.error("❌ Gagal membuka halaman URL.")
-
-        except Exception as e:
-            st.error(f"❌ Terjadi kesalahan: {e}")
-        finally:
-            try:
-                driver.quit()
-            except:
-                pass
 
 
 # ======================================================
@@ -323,7 +319,7 @@ with tab3:
 
     if train_file:
         try:
-            df = pd.read_csv(train_file)
+            df = pd.read_csv(train_file ,sep=";", encoding="utf-8")
 
             if 'Tweet' not in df.columns or 'Label' not in df.columns:
                 st.error("❌ Dataset harus memiliki kolom 'Tweet' dan 'Label'")
