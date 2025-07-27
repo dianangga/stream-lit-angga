@@ -1,4 +1,18 @@
 English Word;anger;anticipation;disgust;fear;joy;negative;positive;sadness;surprise;trust;Indonesian Word
+jos;0;0;0;0;1;0;0;0;0;0;jos
+thanks;0;0;0;0;1;0;0;0;0;0;terimakasih
+approved;0;0;0;0;1;0;0;0;0;0;approved
+like;0;0;0;0;1;0;0;0;0;0;sukak
+worth;0;0;0;0;1;0;0;0;0;0;worth
+good;0;0;0;0;1;0;0;0;0;0;good
+like;0;0;0;0;1;0;0;0;0;0;suka
+like;0;0;0;0;1;0;0;0;0;0;gokil
+yummy;0;0;0;0;1;0;0;0;0;0;enak
+best;0;0;0;0;1;0;0;0;0;0;best
+best;0;0;0;0;1;0;0;0;0;0;mantaps
+cleanly;0;0;0;0;0;0;1;0;0;0;rapih
+cool;0;0;0;0;0;0;1;0;0;0;keren
+alhamdulillah;0;0;0;0;1;0;0;0;0;0;alhamdulillah
 aback;0;0;0;0;0;0;0;0;0;0;kembali
 abacus;0;0;0;0;0;0;0;0;0;1;sempoa
 abandon;0;0;0;1;0;1;0;1;0;0;meninggalkan
@@ -1017,7 +1031,7 @@ balloon;0;0;0;0;0;0;0;0;0;0;balon
 ballot;0;1;0;0;0;0;1;0;0;1;suara
 ballroom;0;0;0;0;0;0;0;0;0;0;ruang dansa
 balm;0;1;0;0;1;1;1;0;0;0;balsem
-balmy;0;0;0;0;0;0;0;0;0;0;nyaman
+balmy;0;0;0;0;1;0;0;0;0;0;nyaman
 balsam;0;0;0;0;0;0;1;0;0;0;balsem
 balsamic;0;0;0;0;0;0;0;0;0;0;balsam
 ban;0;0;0;0;0;1;0;0;0;0;melarang
@@ -2756,7 +2770,7 @@ cook;0;0;0;0;0;0;0;0;0;0;memasak
 cookery;0;0;0;0;0;0;0;0;0;0;masakan
 cooking;0;0;0;0;0;0;0;0;0;0;memasak
 cool;0;0;0;0;0;0;1;0;0;0;dingin
-cooler;0;0;0;0;0;0;0;0;0;0;lebih keren
+cooler;0;0;0;0;0;1;0;0;0;0;lebih keren
 cooling;0;0;0;0;0;0;0;0;0;0;pendinginan
 coolness;0;0;0;0;0;0;1;0;0;0;kesejukan
 coop;1;0;1;0;0;1;0;0;0;0;mengurung
@@ -5519,7 +5533,6 @@ good;0;1;0;0;1;0;1;0;1;1;bagus
 goodbye;0;0;0;0;0;0;0;0;0;0;selamat tinggal
 goodly;0;0;0;0;0;0;1;0;0;0;lumayan
 goodness;0;1;0;0;1;0;1;0;1;1;kebaikan
-goods;0;0;0;0;0;0;1;0;0;0;barang
 goodwill;0;0;0;0;0;0;1;0;0;0;niat baik
 goody;0;0;0;0;0;0;0;0;0;0;munafik
 gooey;0;0;0;0;0;0;0;0;0;0;lengket
@@ -10981,7 +10994,7 @@ saturation;0;0;0;0;0;0;0;0;0;0;kejenuhan
 sauce;0;0;0;0;0;0;0;0;0;0;saus
 saucepan;0;0;0;0;0;0;0;0;0;0;panci
 saucer;0;0;0;0;0;0;0;0;0;0;lepek
-saucy;0;0;0;0;0;0;0;0;0;0;cakep
+saucy;0;0;0;0;1;0;0;0;0;0;cakep
 sauerkraut;0;0;0;0;0;0;0;0;0;0;kol parut
 sauna;0;0;0;0;0;0;0;0;0;0;sauna
 savage;1;0;0;1;0;1;0;0;0;0;Kejam

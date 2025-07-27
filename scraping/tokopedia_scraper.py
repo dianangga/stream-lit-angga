@@ -322,6 +322,7 @@ def scrape_tokopedia_reviews(driver):
         body = driver.find_element(By.TAG_NAME, 'body')
         body.send_keys(Keys.ESCAPE)
         driver.execute_script("window.scrollBy(0, 2000);")
+        driver.execute_script("window.scrollBy(0, 2000);")
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, 'css-15m2bcr'))
         )

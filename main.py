@@ -6,6 +6,9 @@ import pickle
 import re
 import time
 from urllib.parse import urlparse
+from collections import Counter
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
@@ -60,122 +63,10 @@ else:
         st.rerun(scope="app")
 
 # === Tabs ===
-tab1, tab2, tab3 = st.tabs(["📌 Proses Lexicon + TF-IDF + SVM", "📌 Scraping & Proses Lexicon + TF-IDF + SVM", "📌 Train Manual dari Label & Tweet"])
+tab1, tab2 = st.tabs(["📌 Scraping & Proses Lexicon + TF-IDF + SVM", "📌 Train Manual dari Label & Tweet"])
 
-# ======================================================
-# ===================== TAB 1 ==========================
-# ======================================================
 with tab1:
-    st.title("📌 Tab 1: Proses Otomatis (Lexicon + TF-IDF + SVM)")
-
-    ulasan_file = st.file_uploader("📄 Upload file 'ulasan.csv'", type=["csv"])
-
-    if ulasan_file:
-        try:
-            # === Load file
-            df = pd.read_csv(ulasan_file)
-            lexicon_df = pd.read_csv("lexicon/lexicon.csv")
-
-
-            if 'ulasan' not in df.columns or 'kata' not in lexicon_df.columns or 'label' not in lexicon_df.columns:
-                st.error("❌ Pastikan file memiliki kolom 'ulasan' dan lexicon punya 'kata', 'label'")
-                st.stop()
-
-            new_texts = df['ulasan'].astype(str).tolist()
-            cleaned_texts = [preprocess(text) for text in new_texts]
-
-            # === Load model, vectorizer, encoder ===
-            with open('model/svm_model.pkl', 'rb') as f:
-                model = pickle.load(f)
-            with open('model/tfidf_vectorizer.pkl', 'rb') as f:
-                vectorizer = pickle.load(f)
-            with open('model/label_encoder.pkl', 'rb') as f:
-                encoder = pickle.load(f)
-
-            # === Lexicon Word Sets ===
-            senang_words = set(lexicon_df[lexicon_df['label'].str.lower() == 'senang']['kata'].str.lower())
-            marah_words = set(lexicon_df[lexicon_df['label'].str.lower() == 'marah']['kata'].str.lower())
-            sedih_words = set(lexicon_df[lexicon_df['label'].str.lower() == 'sedih']['kata'].str.lower())
-            netral_words = set(lexicon_df[lexicon_df['label'].str.lower() == 'netral']['kata'].str.lower())
-
-            def label_by_lexicon(text):
-                words = text.split()
-                total_match = {
-                    "senang": sum(w in senang_words for w in words),
-                    "marah": sum(w in marah_words for w in words),
-                    "sedih": sum(w in sedih_words for w in words),
-                    "netral": sum(w in netral_words for w in words)
-                }
-                if any(total_match.values()):
-                    return max(total_match, key=total_match.get)
-                else:
-                    return "netral"
-            
-            # === Proses Prediksi Gabungan ===
-            results = []
-            final_predictions = []
-
-            for i, cleaned in enumerate(cleaned_texts):
-                # SVM Prediction
-                X_new = vectorizer.transform([cleaned])
-                svm_pred = model.predict(X_new)
-                svm_label = encoder.inverse_transform(svm_pred)[0]
-
-                # Lexicon Prediction
-                lexicon_label = label_by_lexicon(cleaned)
-
-                # Final decision rule
-                if svm_label == 'netral' or svm_label != lexicon_label:
-                    final_label = lexicon_label
-                else:
-                    final_label = svm_label
-
-                final_predictions.append(final_label)
-
-                results.append({
-                    "Teks Asli": new_texts[i],
-                    "Preprocessed": cleaned,
-                    "Prediksi SVM": svm_label,
-                    "Prediksi Lexicon": lexicon_label,
-                    "Final Decision": final_label
-                })
-
-            st.subheader("📊 Hasil Prediksi Gabungan (SVM + Lexicon)")
-            st.dataframe(pd.DataFrame(results))
-
-            # === Confusion Matrix & Classification Report
-            y_true = [label_by_lexicon(text) for text in cleaned_texts]
-            y_pred = final_predictions
-
-            base_labels = lexicon_df['label'].str.lower().unique().tolist()
-            mapped_labels = []
-            if 'positif' in base_labels:
-                mapped_labels.append('senang')
-            if 'negatif' in base_labels:
-                mapped_labels.append('marah')
-            mapped_labels.extend(['netral', 'sedih'])
-            mapped_labels = list(dict.fromkeys(mapped_labels))  # remove duplicates
-
-            st.subheader("📋 Classification Report")
-            st.text(classification_report(
-                y_true,
-                y_pred,
-                labels=mapped_labels,
-                target_names=mapped_labels,
-                digits=3
-            ))
-
-            st.subheader("🔍 Confusion Matrix")
-            cm = confusion_matrix(y_true, y_pred, labels=mapped_labels)
-            cm_df = pd.DataFrame(cm,
-                index=[f"Actual: {label.capitalize()}" for label in mapped_labels],
-                columns=[f"Pred: {label.capitalize()}" for label in mapped_labels])
-            st.dataframe(cm_df)
-
-        except Exception as e:
-            st.error(f"❌ Terjadi kesalahan: {e}")
-with tab2:
-    st.title("📌 Tab 2: Proses Otomatis dari Scraping Tokopedia (Lexicon + TF-IDF + SVM)")
+    st.title("📌Proses Otomatis dari Scraping Tokopedia (Lexicon + TF-IDF + SVM)")
 
     url_input = st.text_input("🔗 Masukkan URL produk Tokopedia")
 
@@ -217,9 +108,9 @@ with tab2:
                     try:
                         with open(f'model/svm_model_{kernel_option}.pkl', 'rb') as f:
                             model = pickle.load(f)
-                        with open('model/tfidf_vectorizer.pkl', 'rb') as f:
+                        with open(f'model/tfidf_vectorizer_{kernel_option}.pkl', 'rb') as f:
                             vectorizer = pickle.load(f)
-                        with open('model/label_encoder.pkl', 'rb') as f:
+                        with open(f'model/label_encoder_{kernel_option}.pkl', 'rb') as f:
                             encoder = pickle.load(f)
                     except FileNotFoundError:
                         st.error(f"❌ Model untuk kernel '{kernel_option}' belum dilatih. Silakan latih terlebih dahulu di Tab 3 atau pastikan file 'svm_model_{kernel_option}.pkl' ada.")
@@ -227,7 +118,7 @@ with tab2:
 
                     # === Load Lexicon (senang, marah, sedih saja)
                     nrc_df = pd.read_csv("lexicon/Indonesian-NRC-EmoLex.csv", sep=";", encoding="utf-8")
-                    senang_words = set(nrc_df[nrc_df['joy'] == 1]['Indonesian Word'].str.lower())
+                    senang_words = set(nrc_df[(nrc_df['joy'] == 1) | (nrc_df['positive'] == 1)]['Indonesian Word'].str.lower())
                     marah_words = set(nrc_df[nrc_df['anger'] == 1]['Indonesian Word'].str.lower())
                     sedih_words = set(nrc_df[nrc_df['sadness'] == 1]['Indonesian Word'].str.lower())
 
@@ -297,8 +188,34 @@ with tab2:
                         columns=[f"Pred: {label.capitalize()}" for label in mapped_labels])
                     st.dataframe(cm_df)
 
-                else:
-                    st.error("❌ Gagal membuka halaman URL.")
+                    emotion_counts = Counter(y_pred)
+                    df_emotion = pd.DataFrame(emotion_counts.items(), columns=['Emosi', 'Jumlah'])
+
+                    # Hitung total jumlah
+                    st.subheader("📉 Diagram Batang Emosi Prediksi")
+                    fig2, ax2 = plt.subplots()
+                    # Hitung total jumlah
+                    total = df_emotion['Jumlah'].sum()
+                    # Buat bar plot
+                    sns.barplot(data=df_emotion, x='Emosi', y='Jumlah', palette="pastel", ax=ax2)
+                    # Tambahkan teks jumlah dan persentase di atas setiap bar
+                    for i, row in df_emotion.iterrows():
+                        # Hitung persentase
+                        percentage = (row['Jumlah'] / total) * 100
+                        
+                        # Tampilkan nilai jumlah dan persentase
+                        ax2.text(i, 
+                                row['Jumlah'] + 0.5, 
+                                f"{int(row['Jumlah'])}\n({percentage:.1f}%)",  # Gabungkan nilai dan persentase
+                                ha='center', 
+                                va='center',
+                                fontsize=10)
+                    # Atur label sumbu dan judul jika diperlukan
+                    ax2.set_ylabel('Jumlah')
+                    ax2.set_xlabel('Emosi')
+                    ax2.set_title('Distribusi Emosi')
+                    st.pyplot(fig2)
+               
 
             except Exception as e:
                 st.error(f"❌ Terjadi kesalahan: {e}")
@@ -312,62 +229,48 @@ with tab2:
 # ======================================================
 # ===================== TAB 2 ==========================
 # ======================================================
-with tab3:
-    st.title("📌 Tab 3: Train Manual dari Dataset Label & Tweet")
+with tab2:
+    st.title("📚 Train SVM Emosi (Multi Kernel)")
+    uploaded_file = st.file_uploader("📁 Upload dataset CSV", type=["csv"])
 
-    train_file = st.file_uploader("📄 Upload file CSV dengan kolom 'Label' dan 'Tweet'", type=["csv"])
+    if uploaded_file:
+        data = pd.read_csv(uploaded_file, sep=';')
+        
+        if 'text' not in data.columns or 'emotion' not in data.columns:
+            st.error("❌ CSV harus punya kolom 'text' dan 'emotion'")
+        else:
+            st.success("✅ Dataset berhasil dimuat!")
+            st.dataframe(data)
 
-    if train_file:
-        try:
-            df = pd.read_csv(train_file ,sep=";", encoding="utf-8")
+            if st.button("🚀 Mulai Training"):
+                with st.spinner("🔄 Memproses data..."):
+                    texts = data['text']
+                    labels = data['emotion']
 
-            if 'Tweet' not in df.columns or 'Label' not in df.columns:
-                st.error("❌ Dataset harus memiliki kolom 'Tweet' dan 'Label'")
-                st.stop()
+                    cleaned_texts = texts.apply(preprocess)
+                    vectorizer = TfidfVectorizer()
+                    X = vectorizer.fit_transform(cleaned_texts)
 
-            df['Tweet_cleaned'] = df['Tweet'].astype(str).apply(preprocess)
+                    encoder = LabelEncoder()
+                    y = encoder.fit_transform(labels)
 
-            encoder = LabelEncoder()
-            df['label_encoded'] = encoder.fit_transform(df['Label'])
+                    X_train, X_test, y_train, y_test = train_test_split(
+                        X, y, test_size=0.5, random_state=42, stratify=y
+                    )
 
-            X = df['Tweet_cleaned']
-            y = df['label_encoded']
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                    kernels = ['linear', 'poly', 'rbf', 'sigmoid']
+                    os.makedirs('model', exist_ok=True)
 
-            vectorizer = TfidfVectorizer(min_df=1, max_df=0.95)
-            X_train_vec = vectorizer.fit_transform(X_train)
-            X_test_vec = vectorizer.transform(X_test)
+                    for kernel in kernels:
+                        st.subheader(f"🔧 Kernel: {kernel}")
+                        model = SVC(kernel=kernel, probability=True)
+                        model.fit(X_train, y_train)
+                        # Simpan model
+                        with open(f'model/svm_model_{kernel}.pkl', 'wb') as f:
+                            pickle.dump(model, f)
+                        with open(f'model/tfidf_vectorizer_{kernel}.pkl', 'wb') as f:
+                            pickle.dump(vectorizer, f)
+                        with open(f'model/label_encoder_{kernel}.pkl', 'wb') as f:
+                            pickle.dump(encoder, f)
 
-            model = SVC(kernel='linear', class_weight='balanced')
-            model.fit(X_train_vec, y_train)
-
-            y_pred = model.predict(X_test_vec)
-
-            st.subheader("📊 Classification Report")
-            report = classification_report(
-                y_test,
-                y_pred,
-                labels=encoder.transform(encoder.classes_),
-                target_names=encoder.classes_,
-                output_dict=True
-            )
-            st.dataframe(pd.DataFrame(report).transpose())
-
-            cm = confusion_matrix(y_test, y_pred)
-            cm_df = pd.DataFrame(cm, index=encoder.classes_, columns=encoder.classes_)
-            st.subheader("📉 Confusion Matrix")
-            st.dataframe(cm_df)
-
-            # === Save Model, Vectorizer, Label Encoder ===
-            os.makedirs('model', exist_ok=True)
-            with open('model/svm_model.pkl', 'wb') as f:
-                pickle.dump(model, f)
-            with open('model/tfidf_vectorizer.pkl', 'wb') as f:
-                pickle.dump(vectorizer, f)
-            with open('model/label_encoder.pkl', 'wb') as f:
-                pickle.dump(encoder, f)
-
-            st.success("✅ Model dari Tab 2 berhasil disimpan di folder `model/`.")
-
-        except Exception as e:
-            st.error(f"❌ Gagal memproses: {e}")
+                        st.success(f"✅ Model kernel '{kernel}' berhasil disimpan!")
