@@ -63,7 +63,7 @@ else:
         st.rerun(scope="app")
 
 # === Tabs ===
-tab1, tab2,tab3= st.tabs(["📌 Scraping & Proses Lexicon + TF-IDF + SVM", "📌 Train Manual SVM Multi Kernel","asdasdasdasdda"])
+tab1, tab2= st.tabs(["📌 Scraping & Proses Lexicon + TF-IDF + SVM", "📌 Train Manual SVM Multi Kernel",])
 
 with tab1:
     st.title("📌 Proses Otomatis dari Scraping Tokopedia (Lexicon + TF-IDF + SVM)")
@@ -195,32 +195,9 @@ with tab1:
             y_true = lex_labels
             y_pred = svm_labels
             mapped_labels = ["senang", "marah", "sedih", "netral"]
-            
-            report_dict = classification_report(
-                y_true, y_pred, labels=mapped_labels, target_names=mapped_labels, digits=3, output_dict=True
-            )
-            report_df = pd.DataFrame(report_dict).T
 
-            # Hitung accuracy per kelas
-            cm = confusion_matrix(y_true, y_pred, labels=mapped_labels)
-            accuracy_per_class = []
-            for i in range(len(mapped_labels)):
-                TP = cm[i, i]
-                FP = cm[:, i].sum() - TP
-                FN = cm[i, :].sum() - TP
-                TN = cm.sum() - (TP + FP + FN)
-                acc = (TP + TN) / cm.sum()
-                accuracy_per_class.append(acc)
-
-            # Tambahkan kolom akurasi per kelas
-            report_df.insert(0, "Akurasi Perkelas", accuracy_per_class + [None, None, None])
-
-            # Tampilkan di Streamlit
             st.subheader("📋 Classification Report")
-            st.dataframe(report_df.round(3))
-    
-            # st.subheader("📋 Classification Report")
-            # st.text(classification_report(y_true, y_pred, labels=mapped_labels, target_names=mapped_labels, digits=3))
+            st.text(classification_report(y_true, y_pred, labels=mapped_labels, target_names=mapped_labels, digits=3))
 
             st.subheader("🔍 Confusion Matrix")
             cm = confusion_matrix(y_true, y_pred, labels=mapped_labels)
@@ -306,124 +283,124 @@ with tab2:
                             pickle.dump(encoder, f)
 
                         st.success(f"✅ Model kernel '{kernel}' berhasil disimpan!")
-with tab3:
-    st.title("📥 Analisis Emosi dari File CSV (Lexicon + TF-IDF + SVM)")
+# with tab3:
+#     st.title("📥 Analisis Emosi dari File CSV (Lexicon + TF-IDF + SVM)")
 
-    uploaded_file = st.file_uploader("📂 Upload file CSV berisi komentar", type=["csv"])
+#     uploaded_file = st.file_uploader("📂 Upload file CSV berisi komentar", type=["csv"])
 
-    kernel_option = st.selectbox(
-        "🔧 Pilih Kernel SVM",
-        options=["linear", "poly", "rbf", "sigmoid"],
-        index=0,
-        key="select_kernel_scrape"
-    )
+#     kernel_option = st.selectbox(
+#         "🔧 Pilih Kernel SVM",
+#         options=["linear", "poly", "rbf", "sigmoid"],
+#         index=0,
+#         key="select_kernel_scrape"
+#     )
 
-    if uploaded_file is not None:
-        try:
-            df = pd.read_csv(uploaded_file,sep=';')
-            if "Komentar" not in df.columns:
-                st.error("❌ Kolom 'Komentar' tidak ditemukan di file CSV!")
-                st.stop()
+#     if uploaded_file is not None:
+#         try:
+#             df = pd.read_csv(uploaded_file,sep=';')
+#             if "Komentar" not in df.columns:
+#                 st.error("❌ Kolom 'Komentar' tidak ditemukan di file CSV!")
+#                 st.stop()
 
-            comments = df["Komentar"].dropna().tolist()
+#             comments = df["Komentar"].dropna().tolist()
 
-            st.subheader("💬 Komentar yang dimuat dari file")
-            st.write(f"Total komentar: {len(comments)}")
-            st.dataframe(pd.DataFrame(comments, columns=["Komentar"]))
+#             st.subheader("💬 Komentar yang dimuat dari file")
+#             st.write(f"Total komentar: {len(comments)}")
+#             st.dataframe(pd.DataFrame(comments, columns=["Komentar"]))
 
-            # === Preprocessing
-            new_texts = comments
-            tokenized_texts = [tokenize(preprocess(text)) for text in new_texts]
-            cleaned_texts = [' '.join(tokens) for tokens in tokenized_texts]
+#             # === Preprocessing
+#             new_texts = comments
+#             tokenized_texts = [tokenize(preprocess(text)) for text in new_texts]
+#             cleaned_texts = [' '.join(tokens) for tokens in tokenized_texts]
 
-            # === Load model SVM
-            with open(f'model/svm_model_{kernel_option}.pkl', 'rb') as f:
-                model = pickle.load(f)
-            with open(f'model/tfidf_vectorizer_{kernel_option}.pkl', 'rb') as f:
-                vectorizer = pickle.load(f)
-            with open(f'model/label_encoder_{kernel_option}.pkl', 'rb') as f:
-                encoder = pickle.load(f)
+#             # === Load model SVM
+#             with open(f'model/svm_model_{kernel_option}.pkl', 'rb') as f:
+#                 model = pickle.load(f)
+#             with open(f'model/tfidf_vectorizer_{kernel_option}.pkl', 'rb') as f:
+#                 vectorizer = pickle.load(f)
+#             with open(f'model/label_encoder_{kernel_option}.pkl', 'rb') as f:
+#                 encoder = pickle.load(f)
 
-            # === Load Lexicon
-            nrc_df = pd.read_csv("lexicon/Indonesian-NRC-EmoLex.csv", sep=";", encoding="utf-8")
-            senang_words = set(nrc_df[(nrc_df['joy'] == 1) | (nrc_df['positive'] == 1)]['Indonesian Word'].str.lower())
-            marah_words = set(nrc_df[nrc_df['anger'] == 1]['Indonesian Word'].str.lower())
-            sedih_words = set(nrc_df[nrc_df['sadness'] == 1]['Indonesian Word'].str.lower())
+#             # === Load Lexicon
+#             nrc_df = pd.read_csv("lexicon/Indonesian-NRC-EmoLex.csv", sep=";", encoding="utf-8")
+#             senang_words = set(nrc_df[(nrc_df['joy'] == 1) | (nrc_df['positive'] == 1)]['Indonesian Word'].str.lower())
+#             marah_words = set(nrc_df[nrc_df['anger'] == 1]['Indonesian Word'].str.lower())
+#             sedih_words = set(nrc_df[nrc_df['sadness'] == 1]['Indonesian Word'].str.lower())
 
-            def label_by_lexicon(tokens):
-                total_match = {
-                    "senang": sum(w in senang_words for w in tokens),
-                    "marah": sum(w in marah_words for w in tokens),
-                    "sedih": sum(w in sedih_words for w in tokens),
-                }
-                values = list(total_match.values())
-                if sum(values) == 0 or values.count(values[0]) == len(values):
-                    return "netral"
-                return max(total_match, key=total_match.get)
+#             def label_by_lexicon(tokens):
+#                 total_match = {
+#                     "senang": sum(w in senang_words for w in tokens),
+#                     "marah": sum(w in marah_words for w in tokens),
+#                     "sedih": sum(w in sedih_words for w in tokens),
+#                 }
+#                 values = list(total_match.values())
+#                 if sum(values) == 0 or values.count(values[0]) == len(values):
+#                     return "netral"
+#                 return max(total_match, key=total_match.get)
 
-            # === Prediksi
-            results = []
-            final_predictions = []
+#             # === Prediksi
+#             results = []
+#             final_predictions = []
 
-            for i in range(len(cleaned_texts)):
-                cleaned = cleaned_texts[i]
-                tokens = tokenized_texts[i]
+#             for i in range(len(cleaned_texts)):
+#                 cleaned = cleaned_texts[i]
+#                 tokens = tokenized_texts[i]
 
-                X_new = vectorizer.transform([cleaned])
-                svm_pred = model.predict(X_new)
-                svm_label = encoder.inverse_transform(svm_pred)[0]
+#                 X_new = vectorizer.transform([cleaned])
+#                 svm_pred = model.predict(X_new)
+#                 svm_label = encoder.inverse_transform(svm_pred)[0]
 
-                lexicon_label = label_by_lexicon(tokens)
+#                 lexicon_label = label_by_lexicon(tokens)
 
-                final_label = lexicon_label if svm_label == 'netral' or svm_label != lexicon_label else svm_label
+#                 final_label = lexicon_label if svm_label == 'netral' or svm_label != lexicon_label else svm_label
 
-                final_predictions.append(svm_label)
-                results.append({
-                    "Teks Asli": new_texts[i],
-                    "Preprocessed": cleaned,
-                    "Prediksi SVM": svm_label,
-                    "Prediksi Lexicon": lexicon_label,
-                    "Final Decision": final_label
-                })
+#                 final_predictions.append(svm_label)
+#                 results.append({
+#                     "Teks Asli": new_texts[i],
+#                     "Preprocessed": cleaned,
+#                     "Prediksi SVM": svm_label,
+#                     "Prediksi Lexicon": lexicon_label,
+#                     "Final Decision": final_label
+#                 })
 
-            st.subheader("📊 Hasil Prediksi Gabungan (SVM + Lexicon)")
-            st.dataframe(pd.DataFrame(results))
+#             st.subheader("📊 Hasil Prediksi Gabungan (SVM + Lexicon)")
+#             st.dataframe(pd.DataFrame(results))
 
-            y_true = [label_by_lexicon(tokens) for tokens in tokenized_texts]
-            y_pred = final_predictions
-            mapped_labels = ["senang", "marah", "sedih", "netral"]
+#             y_true = [label_by_lexicon(tokens) for tokens in tokenized_texts]
+#             y_pred = final_predictions
+#             mapped_labels = ["senang", "marah", "sedih", "netral"]
 
-            st.subheader("📋 Classification Report")
-            st.text(classification_report(
-                y_true,
-                y_pred,
-                labels=mapped_labels,
-                target_names=mapped_labels,
-                digits=3
-            ))
+#             st.subheader("📋 Classification Report")
+#             st.text(classification_report(
+#                 y_true,
+#                 y_pred,
+#                 labels=mapped_labels,
+#                 target_names=mapped_labels,
+#                 digits=3
+#             ))
 
-            st.subheader("🔍 Confusion Matrix")
-            cm = confusion_matrix(y_true, y_pred, labels=mapped_labels)
-            cm_df = pd.DataFrame(cm,
-                index=[f"Actual: {label.capitalize()}" for label in mapped_labels],
-                columns=[f"Pred: {label.capitalize()}" for label in mapped_labels])
-            st.dataframe(cm_df)
+#             st.subheader("🔍 Confusion Matrix")
+#             cm = confusion_matrix(y_true, y_pred, labels=mapped_labels)
+#             cm_df = pd.DataFrame(cm,
+#                 index=[f"Actual: {label.capitalize()}" for label in mapped_labels],
+#                 columns=[f"Pred: {label.capitalize()}" for label in mapped_labels])
+#             st.dataframe(cm_df)
 
-            emotion_counts = Counter(y_pred)
-            df_emotion = pd.DataFrame(emotion_counts.items(), columns=['Emosi', 'Jumlah'])
+#             emotion_counts = Counter(y_pred)
+#             df_emotion = pd.DataFrame(emotion_counts.items(), columns=['Emosi', 'Jumlah'])
 
-            st.subheader("📉 Diagram Batang Emosi Prediksi")
-            fig2, ax2 = plt.subplots()
-            total = df_emotion['Jumlah'].sum()
-            sns.barplot(data=df_emotion, x='Emosi', y='Jumlah', palette="pastel", ax=ax2)
-            for i, row in df_emotion.iterrows():
-                percentage = (row['Jumlah'] / total) * 100
-                ax2.text(i, row['Jumlah'] + 0.5, f"{int(row['Jumlah'])}\n({percentage:.1f}%)",
-                        ha='center', va='center', fontsize=10)
-            ax2.set_ylabel('Jumlah')
-            ax2.set_xlabel('Emosi')
-            ax2.set_title('Distribusi Emosi')
-            st.pyplot(fig2)
+#             st.subheader("📉 Diagram Batang Emosi Prediksi")
+#             fig2, ax2 = plt.subplots()
+#             total = df_emotion['Jumlah'].sum()
+#             sns.barplot(data=df_emotion, x='Emosi', y='Jumlah', palette="pastel", ax=ax2)
+#             for i, row in df_emotion.iterrows():
+#                 percentage = (row['Jumlah'] / total) * 100
+#                 ax2.text(i, row['Jumlah'] + 0.5, f"{int(row['Jumlah'])}\n({percentage:.1f}%)",
+#                         ha='center', va='center', fontsize=10)
+#             ax2.set_ylabel('Jumlah')
+#             ax2.set_xlabel('Emosi')
+#             ax2.set_title('Distribusi Emosi')
+#             st.pyplot(fig2)
 
-        except Exception as e:
-            st.error(f"❌ Terjadi kesalahan: {e}")
+#         except Exception as e:
+#             st.error(f"❌ Terjadi kesalahan: {e}")
